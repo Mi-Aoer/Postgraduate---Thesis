@@ -18,6 +18,7 @@
 *.fot
 *.cb
 *.cb2
+*.bcf-SAVE-ERROR
 .*.lb
 
 ## Intermediate documents:

@@ -30,7 +30,7 @@
 %% 
 \RequirePackage{expl3,l3keys2e}
 \ProvidesExplClass{bithesis}
-  {2026-03-27} {3.8.9-beta} {BIT Thesis Templates}
+  {2026-03-31} {3.8.9} {BIT Thesis Templates}
 \int_new:N \g__bithesis_thesis_type_int
 \int_new:N \g__bithesis_head_zihao_int
 \bool_new:N \g__bithesis_twoside_bool
@@ -1007,15 +1007,22 @@
 \cs_set:Npn \arabicHeiti #1 {#1}
 \fancypagestyle{BIThesis}{
   \fancyhf{}
-  % 定义页眉、页码
-  \fancyhead[C]{
-    \zihao{\int_use:N \g__bithesis_head_zihao_int}
-    \ziju{0.08}\songti
-    \tl_use:N \l__bithesis_style_head_tl
+  % 此处按 N 判断是因为 style/head 可能填写 \LaTeX 这样的宏，不能随便按 e/x 展开；模板默认值虽需展开才能判断，但部分非空，所以不展开亦可。
+  \tl_if_empty:NTF \l__bithesis_style_head_tl {
+    % 若 style/head 为空，则不仅页眉文字为空，页眉线也应删除
+    \renewcommand{\headrulewidth}{0pt}
+  } {
+    % 定义页眉（模板默认）
+    \fancyhead[C]{
+      \zihao{\int_use:N \g__bithesis_head_zihao_int}
+      \ziju{0.08}\songti
+      \tl_use:N \l__bithesis_style_head_tl
+    }
+    % 页眉分割线稍微粗一些
+    \renewcommand{\headrulewidth}{0.6pt}
   }
+  % 定义页码
   \fancyfoot[C]{\songti\zihao{5} \thepage}
-  % 页眉分割线稍微粗一些
-  \RenewDocumentCommand \headrulewidth {} {0.6pt}
 }
 \ctexset{chapter={
     number = {\arabicHeiti{ \arabic{chapter} }},
@@ -2502,6 +2509,7 @@
     }
 
     \__bithesis_if_graduate:T {
+      % 只取消首段的首行缩进（学校成文规范未描述第二段如何缩进，但2026年3月27日研究生院老师肯定了当前做法）
       \noindent\textbf{\c__bithesis_label_abstract_en_tl :}
     }
   }
@@ -2701,8 +2709,9 @@
       \__bithesis_if_graduate:T {
         % 保证 gobble 页码设置生效
         \newpage
-        % 致谢位于摘要以前，需单面打印；不过学校没有专门考虑致谢多页的情况（以前硕博的致谢和本科一样，也位于后置部分）。
+        % 致谢位于摘要以前，需单面打印；不过学校成文规范未考虑到致谢可能多页（以前硕博的致谢和本科一样，也位于后置部分）。
         % 如果致谢多页，此设置会保证摘要首页位于某页纸的正面，而不是致谢页的背面；但致谢本身仍双面打印。
+        % 2026年3月27日研究生院老师肯定了这一做法：“可双面打，保持‘摘要’首页位于正面页。”
         \cleardoublepage
       }
     \end{blindPeerReview}
