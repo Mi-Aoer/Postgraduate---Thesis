@@ -164,6 +164,261 @@ Student 端的输出还要继续进入图谱构建与基础服务验证环节。
 
 从图~\ref{fig:problem_mechanism_tech_mapping}可以看出，本文的技术路线是顺着知识图谱构建场景中的几个实际问题往下展开的。前面在 3.1 中已经提到，任务的难点主要集中在三个方面：高质量训练数据难获得，抽取结果容易出现结构不稳和类型不匹配，方法要服务应用。所以这里技术路线的设计实际上就是围绕这三个问题逐步展开的：从数据构建、到可控抽取、再到应用验证逐层推进，也对应了后续第四章、第五章和第六章的展开顺序。
 
+\section{新闻领域本体模型设计}
+
+本体（Ontology）是知识图谱构建的基础，它用于定义领域中的实体类型、关系类型和属性类型，并刻画它们之间的层次结构与语义关联。对于新闻领域知识图谱而言，本体模型不仅决定了图谱中“有哪些对象”“对象之间存在哪些联系”以及“对象具备哪些属性”，也为新闻文本中的知识抽取、结果组织和后续入库提供统一的模式约束。
+
+本文以军事新闻为重点实例场景，对新闻领域本体模型进行场景化细化。本小节对实体类型、关系类型和属性类型进行了统一设计，下文将从本体结构、新闻领域实体类型、新闻领域关系类型以及属性类型与约束作用四个方面进行说明。
+
+\subsection{本体结构}
+
+本文构建的新闻领域本体模型采用“模式层—实例层”的两层结构。模式层用于定义领域中的实体类型、关系类型和属性类型，是知识图谱构建与知识抽取的统一语义基础；实例层则承载从具体新闻文本中抽取得到的实体实例、关系实例及其属性值。模式层回答的是“应当如何组织知识”的问题，实例层回答的是“从文本中实际获得了哪些知识”的问题，二者相互衔接，共同构成新闻领域知识图谱的基本表示框架。
+
+考虑到军事新闻文本大多围绕某一事件展开，本文在本体结构设计中以“军事新闻事件”为核心，将行动主体、军事资产、地点、时间、数量、任务内容、事件结果和资源等要素组织到统一的事件语义框架之中。其中，军事新闻事件实体用于描述新闻报道中的核心事件；行动主体、军事资产等实体用于表示事件的主要参与方及关键对象；地点、时间和数量等实体用于补充事件发生的时空背景和规模信息；任务内容、事件结果和资源等实体则用于进一步刻画事件的目的、后果与支撑条件。通过这样的结构设计，可以将原本分散在新闻文本中的事件信息及其上下文要素进行统一表达，使知识图谱能够较完整地反映军事新闻中的事件逻辑和语义关联。
+
+\subsection{新闻领域实体类型}
+
+在军事新闻知识图谱中，实体类型是知识组织的基本单元。结合军事新闻文本的内容特点，本文围绕事件表达需求设计了若干核心实体类型，如表~\ref{tab:military_news_entity_types}示。整体上看，这些实体可以划分为三类：一类是事件核心类实体，即军事新闻事件；一类是事件参与类实体，包括行动主体和军事资产等，用于表示事件中的主要参与者和关键对象；另一类是事件上下文类实体，包括地点、时间、数量、任务内容、事件结果和资源等，用于补充描述事件发生的背景、过程和结果。
+
+\begin{table}[htbp]
+  \centering
+  \caption{军事新闻领域实体类型的定义}
+  \label{tab:military_news_entity_types}
+  {\renewcommand{\arraystretch}{1.15}
+  \small
+  \begin{tabularx}{0.96\textwidth}{
+    >{\raggedright\arraybackslash}p{0.20\textwidth}
+    >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}p{0.28\textwidth}
+  }
+    \toprule
+    实体类型 & 描述 & 示例 \\
+    \midrule
+    MilitaryNewsEvent
+    & 表示军事新闻文本中描述的事件实例，包括部署、展示、试验、机动、事故、冲突、支持等不同类别的新闻事件
+    & 某次舰艇部署事件、某次装备展示事件、某次导弹试射事件、某次军事冲突事件 \\
+
+    Actor
+    & 表示军事新闻事件中的行动主体、参与主体或接收主体，包括国家、组织、机构、企业及人员群体
+    & 美国、俄罗斯、美国海军、第七舰队、雷声公司、水兵 \\
+
+    MilitaryAsset
+    & 表示事件中涉及的军事资产，包括装备、平台、系统及武器
+    & F-35B战机、蓝岭号、萨德系统、防空雷达、高超声速武器 \\
+
+    Location
+    & 表示事件发生、部署、展示、试验或行动涉及的地理位置、区域或设施空间
+    & 中东、地中海、长崎县佐世保基地、日本横须贺军港 \\
+
+    Time
+    & 表示事件发生时间、计划时间或新闻报道中的时间表达
+    & 6月13日、今天、下个月、未来几个月 \\
+
+    QuantityValue
+    & 表示事件中的人数、架次、枚数、艘数等定量信息
+    & 一名、21名、104架、40架 \\
+
+    TaskContent
+    & 表示事件中的任务内容、训练内容、行动内容或试验内容
+    & 飞行训练任务、联合演习任务、侦察任务、试射任务 \\
+
+    EventResult
+    & 表示事件导致的结果、后果或状态变化
+    & 一名飞行员死亡、39名艇员死亡、成功拦截 \\
+
+    MaterialResource
+    & 表示支援、移交、保障类事件中涉及的资源性对象
+    & 补给物资、技术成果、支援资源 \\
+    \bottomrule
+  \end{tabularx}}
+\end{table}
+
+\subsection{新闻领域关系类型}
+
+关系类型用于描述不同实体之间的语义连接方式，是知识图谱中形成网络结构的关键。对于军事新闻场景而言，仅识别出事件、主体、装备和地点等实体还不足以形成可用的知识图谱，还需要进一步明确这些实体之间的语义联系。为此，本文结合军事新闻文本中的典型表达方式设计了新闻领域关系类型，如表~\ref{tab:military_news_relation_types}所示。
+
+\begin{table}[htbp]
+  \centering
+  \caption{军事新闻领域关系类型的定义}
+  \label{tab:military_news_relation_types}
+  {\renewcommand{\arraystretch}{1.15}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{0.96\textwidth}{
+    >{\raggedright\arraybackslash}p{0.22\textwidth}
+    >{\raggedright\arraybackslash}p{0.24\textwidth}
+    >{\raggedright\arraybackslash}p{0.20\textwidth}
+    >{\raggedright\arraybackslash}X
+  }
+    \toprule
+    头实体 & 关系类型 & 尾实体 & 说明 \\
+    \midrule
+    MilitaryNewsEvent & hasActor & Actor & 事件相关主体、参与主体或实施主体 \\
+    MilitaryNewsEvent & hasMilitaryAsset & MilitaryAsset & 与事件直接相关的军事资产 \\
+    MilitaryNewsEvent & hasLocation & Location & 事件发生、涉及或影响的地点 \\
+    MilitaryNewsEvent & hasTime & Time & 事件发生时间、计划时间或报道中的时间表达 \\
+    MilitaryNewsEvent & hasQuantity & QuantityValue & 事件中的编制数量、部署数量、伤亡数量或受损数量 \\
+    MilitaryNewsEvent & hasTaskContent & TaskContent & 事件中的试验内容、训练内容、演习内容或任务内容 \\
+    MilitaryNewsEvent & hasEventResult & EventResult & 事件结果、后果或状态变化 \\
+    MilitaryNewsEvent & hasTargetActor & Actor & 事件涉及的目标主体、接收主体或对抗对象 \\
+    MilitaryNewsEvent & hasCarrierAsset & MilitaryAsset & 搭载相关军事资产的平台或载体 \\
+    MilitaryNewsEvent & hasTargetAsset & MilitaryAsset & 冲突、打击或拦截中的目标军事资产 \\
+    MilitaryNewsEvent & hasRecipient & Actor & 接收援助、交付、移交或支援的主体 \\
+    MilitaryNewsEvent & hasDeliveredAsset & MilitaryAsset & 被交付、移交或支援的军事资产 \\
+    MilitaryNewsEvent & hasMaterialResource & MaterialResource & 被援助、保障、交付或转移的资源性对象 \\
+    \bottomrule
+  \end{tabularx}}
+\end{table}
+
+\subsection{属性类型与约束作用}
+
+在实体类型和关系类型之外，属性类型用于进一步描述实体实例的内部特征，是提升知识表达完整性的重要组成部分。本文围绕不同实体类型分别设计了对应的属性集合。表~\ref{tab:event_common_attributes}至表~\ref{tab:material_resource_attributes}分别给出了各类实体的属性定义。
+
+\begin{table}[htbp]
+  \centering
+  \caption{军事新闻事件实体的属性定义}
+  \label{tab:event_common_attributes}
+  {\small
+  \begin{tabular}{p{0.22\textwidth} p{0.18\textwidth} p{0.45\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    event\_id     & String & 事件实例的唯一标识 \\
+    trigger\_text & String & 事件触发词或触发表达 \\
+    event\_type   & String & 事件类别，取值限定为 deploy、exhibit、experiment、manoeuvre、accident、conflict、support 等 \\
+    description   & String & 事件简要描述或补充说明 \\
+    evidence\_text & String & 事件对应的原始证据文本片段 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{行动主体实体的属性定义}
+  \label{tab:actor_attributes}
+  {\small
+  \begin{tabular}{p{0.22\textwidth} p{0.16\textwidth} p{0.42\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    name        & String & 主体名称 \\
+    actor\_type & String & 主体类别，如国家、组织、机构、企业、人员群体 \\
+    affiliation & String & 上级隶属信息或所属体系 \\
+    description & String & 主体简要说明 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{军事资产实体的属性定义}
+  \label{tab:military_asset_attributes}
+  {\small
+  \begin{tabular}{p{0.22\textwidth} p{0.16\textwidth} p{0.42\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    name        & String & 军事资产名称 \\
+    asset\_type & String & 资产类别，如装备、平台、系统、武器 \\
+    model       & String & 型号、编号或代号 \\
+    country     & String & 所属国家或地区 \\
+    description & String & 军事资产简要说明 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{地点实体的属性定义}
+  \label{tab:location_attributes}
+  {\small
+  \begin{tabular}{p{0.22\textwidth} p{0.16\textwidth} p{0.42\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    name          & String & 地点名称 \\
+    location\_type & String & 地点类别，如国家、地区、基地、港口、海域 \\
+    parent\_region & String & 上级区域或所属地理单元 \\
+    description   & String & 地点简要说明 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{时间实体的属性定义}
+  \label{tab:time_attributes}
+  {\small
+  \begin{tabular}{p{0.24\textwidth} p{0.16\textwidth} p{0.40\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    time\_text & String & 时间原始文本表达 \\
+    time\_type & String & 时间类别，如绝对时间、相对时间、时间段 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{数量实体的属性定义}
+  \label{tab:quantity_attributes}
+  {\small
+  \begin{tabular}{p{0.24\textwidth} p{0.16\textwidth} p{0.40\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    value\_text & String & 数量原始文本表达 \\
+    value\_type & String & 数量类别，如人数、架次、枚数、艘数 \\
+    unit       & String & 数量单位 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{任务内容实体的属性定义}
+  \label{tab:task_content_attributes}
+  {\small
+  \begin{tabular}{p{0.24\textwidth} p{0.16\textwidth} p{0.40\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    content\_text & String & 任务内容原始文本 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{事件结果实体的属性定义}
+  \label{tab:event_result_attributes}
+  {\small
+  \begin{tabular}{p{0.22\textwidth} p{0.16\textwidth} p{0.42\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    result\_text & String & 事件结果原始文本 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{资源实体的属性定义}
+  \label{tab:material_resource_attributes}
+  {\small
+  \begin{tabular}{p{0.26\textwidth} p{0.16\textwidth} p{0.38\textwidth}}
+    \toprule
+    属性 & 数据类型 & 说明 \\
+    \midrule
+    resource\_text & String & 资源对象原始文本 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+属性类型不仅承担知识补充功能，还具有重要的约束作用，它有助于统一不同样本中事件与实体的表达方式，提高自动抽取结果在结构层面的完整性与一致性。实体类型、关系类型与属性类型共同构成领域本体约束的基础，使模型输出能够尽量满足预定义的模式要求，减少类型不匹配、信息缺失或结构不完整的结果。在下游知识图谱构建过程中，规范化的属性设计也使抽取结果能够更自然地映射到图谱 schema 之中，支持后续的知识存储、关系查询和简单问答。因此，本文的新闻领域本体模型不仅是知识图谱构建的语义基础，也是后续抽取方法设计与结果控制的重要约束条件。
+
 \section{方法与应用衔接思路}
 
 \subsection{训练数据构建思路}
@@ -184,4 +439,4 @@ Student 端的输出还要继续进入图谱构建与基础服务验证环节。
 
 \section{本章小结}
 
-本章面向新闻领域知识图谱构建需求，对高质量可控知识抽取任务的目标、问题和整体框架进行了统一说明。围绕训练数据质量、抽取结果可控性以及下游图谱应用需求，本章建立了由银标数据集构建、可控知识抽取和图谱应用验证组成的整体技术路线，为后续具体方法展开提供了基础。
+本章面向新闻领域知识图谱构建需求，对高质量可控知识抽取任务的目标、问题和整体框架进行了统一说明，并对军事新闻领域本体模型的设计进行了详细阐述。围绕训练数据质量、抽取结果可控性以及下游图谱应用需求，本章建立了由银标数据集构建、可控知识抽取和图谱应用验证组成的整体技术路线，为后续具体方法展开提供了基础。
