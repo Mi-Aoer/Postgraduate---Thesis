@@ -78,7 +78,7 @@ JSON:
 
 DeepSeek团队 在 DeepSeek-R1 的论文中提出了一个关键结论：推理模式是可以被“蒸馏”的，如果直接把大模型（R1）产生的优秀推理步骤喂给小模型（Qwen）吃，小模型的推理能力会瞬间大幅提升，甚至超过那些自己尝试用强化学习（RL）训练的小模型。而本章选用的DeepSeek-R1-Distill-Qwen-32B 模型就是把 DeepSeek-R1 的能力提取出来，灌输给了 Qwen-2.5-32B，从而让这个较小的模型也获得了类似 R1 的深度思考能力。
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
   \centering
   \caption{DeepSeek-R1 与 DeepSeek-R1-Distill-Qwen-32B 特性对比}
   \label{tab:deepseek_r1_vs_distill_qwen32b}
@@ -137,7 +137,7 @@ QLoRA 的基本思想可以概括为以下三个方面：
 
 \subsection{领域本体模型约束}
 
-本体模型约束的主要内容即对候选抽取结果进行合法性检查与结果过滤，将模型输出限制在已有 schema 所允许的结构空间内，减少关系越界、类型和格式错误的问题。
+本体模型约束的主要内容即对候选抽取结果进行合法性检查，将模型输出限制在已有 schema 所允许的结构空间内，减少关系越界、类型和格式错误的问题，作为后续候选结果的选择提供基础。
 
 \subsubsection*{（1）本体模型约束}
 
@@ -277,15 +277,149 @@ Score_k=\alpha \cdot \widetilde{Conf}_k+\beta \cdot \widetilde{Rule}_k-\gamma \c
 Y^{*}=Y_{k^{*}},\quad k^{*}=\arg\max_{1\le k\le K'} Score_k.
 \]
 
-这样，最终输出将在多个候选结果之间经过比较后确定，能够在一定程度上缓解单次解码带来的随机性，使系统更倾向于保留置信度较高、规则更符合、错误更少的结果。
+这样，最终输出将在多个候选结果之间经过比较后确定，可以在一定程度上缓解单次解码带来的随机性，使系统更倾向于保留置信度较高、更符合本体模型的规则，且错误更少的结果。
 
-\section{实验设计}
+\section{实验设计与结果}
 
 \subsection{数据集与实验设置}
 
-（需要介绍实验环境、实验用数据、模型微调参数设置）
+在本章实验开始之前，需要先准备实验所需的指令微调数据集。这里使用了来自第四章方法构建的军事新闻领域实体关系联合抽取数据集，该数据集共包含 10647 条样本，三元组总量为 55283，表~\ref{tab:ch5_relation_count} 给出了这份数据集中各关系类型对应的三元组数量统计。
+
+\begin{table}[!htbp]
+  \centering
+  \caption{军事新闻领域实体关系联合抽取数据集关系数量统计}
+  \label{tab:ch5_relation_count}
+  {\renewcommand{\arraystretch}{0.7}
+  \small
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabular}{lc}
+    \toprule
+    关系类型 & 数量 \\
+    \midrule
+    hasActor & 22636 \\
+    hasMilitaryAsset & 16306 \\
+    hasTime & 7924 \\
+    hasLocation & 5129 \\
+    hasMaterialResource & 1801 \\
+    hasTaskContent & 584 \\
+    hasEventResult & 523 \\
+    hasQuantity & 380 \\
+    三元组总数 & 55283 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\FloatBarrier
+
+为了评估模型泛化性能，防止过拟合，实验采用交叉验证的方法，先从数据集中抽出1000条作为测试集，剩余的样本按照 8:2 的比例被划分为训练集与评估集，评估集将用于模型训练过程中评估模型的性能，并调整模型的超参数。本章实验从数据集中选择了 5 类实体类型：包括军事新闻事件（MilitaryNewsEvent）、行动主体（Actor）、军事资产（MilitaryAsset）、地点（Location）和时间（Time）；以及 4 类关系类型：包括 hasActor、hasMilitaryAsset、hasLocation 和 hasTime。训练样本统一组织为指令微调格式，输入为新闻文本片段，输出为实体关系联合抽取结果对应的结构化 JSON。
+
+本章各组实验均基于同一主基座模型DeepSeek-R1-Distill-Qwen-32B展开，采用相同的模型参数设定。模型训练、推理与部署所使用的硬件软件环境见表~\ref{tab:experiment_environment}所示。
+
+\begin{table}[!htbp]
+  \centering
+  \caption{实验环境配置}
+  \label{tab:experiment_environment}
+  {\renewcommand{\arraystretch}{0.7}
+  \small
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabular}{lc}
+    \toprule
+    实验环境 & 配置 \\
+    \midrule
+    GPU & NVIDIA RTX 4090 \\
+    CPU & Intel Xeon Gold 6430 \\
+    内存 & 120GB \\
+    存储 & 200GB SSD \\
+    操作系统 & Ubuntu 22.04 LTS \\
+    CUDA版本 & 11.8 \\
+    主要依赖库 & PyTorch 2.1.2, Python 3.10 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所示。
+
+\begin{table}[!htbp]
+  \centering
+  \caption{模型训练的参数设置}
+  \label{tab:training_parameters}
+  {\renewcommand{\arraystretch}{0.7}
+  \small
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabular}{lc}
+    \toprule
+    参数 & 值 \\
+    \midrule
+    batch\_size & 16 \\
+    gradient\_accumulation\_steps & 8 \\
+    epochs & 3 \\
+    learning\_rate & 1e-5 \\
+    weight\_decay & 5e-4 \\
+    adam\_beta2 & 0.92 \\
+    optimizer & AdamW \\
+    max\_source\_length & 1024 \\
+    max\_target\_length & 512 \\
+    lora\_r & 8 \\
+    lora\_alpha & 32 \\
+    lora\_dropout & 0.1 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\FloatBarrier
+
+为保证不同方法之间的可比性，各组实验统一采用相同的任务提示模板、相同的输出 JSON 格式以及相同的基础解码参数设置。
 
 \subsection{对比组与评价指标}
+
+本章围绕“QLoRA 领域适配是否有效”“本体约束与多候选评分机制是否有效”以及“轻量化本地部署是否可行”三个问题设置对比实验。对比组共包括三类。
+
+第一组为未微调基座模型（Base）。该组直接使用基座模型完成军事新闻实体关系抽取，不进行领域参数更新，也不启用本体约束与多候选结果评分，用作零领域适配条件下的基础参照。
+
+第二组为仅进行 QLoRA 微调的模型（QLoRA-only）。该组在相同基座模型上使用训练集进行领域适配训练，但在推理阶段不启用本体约束与多候选结果评分机制，直接输出单次生成结果。该组用于检验参数高效微调是否能够提升模型在军事新闻场景下的抽取能力。
+
+第三组为完整方法（QLoRA + Ontology Constraint + Candidate Scoring）。该组在 QLoRA 微调基础上，进一步对同一输入生成多个候选结果，并结合模型置信度、本体规则满足度与错误惩罚项进行综合评分，从中选择得分最高的候选结果作为最终输出。该组用于检验本体约束与多候选结果评分机制对结果合法性、结构稳定性与最终抽取质量的增益作用。为保证横向比较的公平性，三组方法统一采用相同提示、相同输出格式与相同基础解码参数。
+
+本章评价指标以三元组级别评测为主，以结构化 JSON 联合输出评测为辅。主指标包括 Precision、Recall 和 F1，用于衡量模型在测试集上的三元组级抽取质量。设预测三元组集合为 $\hat{T}$，金标三元组集合为 $T$，在一对一匹配约束下统计真正例 $TP$、假正例 $FP$ 和假负例 $FN$，则三项指标定义为
+\[
+P=\frac{TP}{TP+FP}, \qquad
+R=\frac{TP}{TP+FN}, \qquad
+F1=\frac{2PR}{P+R}.
+\]
+
+其中，一对一匹配表示任一预测三元组至多匹配一个金标三元组，任一金标三元组也至多被一个预测三元组命中，以避免重复预测对统计结果造成放大。该设置与第四章的三元组级评测思路保持一致，但在本章中进一步统一采用大小写不敏感、忽略空格与标点符号的规范化比较方式。
+
+具体而言，对预测三元组 $\hat{t}=(\hat{s},\hat{p},\hat{o})$ 与金标三元组 $t=(s,p,o)$，先分别对头实体、关系类型和尾实体进行文本规范化处理，记为
+\[
+\phi(x)=\mathrm{Normalize}(x),
+\]
+其中 Normalize 表示将字符串统一转为小写，并去除空格与标点符号。若同时满足
+\[
+\phi(\hat{s})=\phi(s), \qquad
+\phi(\hat{p})=\phi(p), \qquad
+\phi(\hat{o})=\phi(o),
+\]
+则认为该预测三元组与金标三元组匹配成功。基于此定义统计 $TP$、$FP$ 与 $FN$，进而计算三元组级 Precision、Recall 与 F1。
+
+除三元组级抽取质量外，本章还引入两个结构可用性指标。其一为可解析率（Parse Rate），用于衡量模型输出是否能够被成功解析为合法 JSON 结构。设测试集样本总数为 $N$，其中可被成功解析的输出样本数为 $N_{parse}$，则
+\[
+ParseRate=\frac{N_{parse}}{N}.
+\]
+该指标用于反映模型输出的结构稳定性，因为对于后续图谱入库而言，无法解析的结果即使局部语义合理，也难以直接使用。
+
+其二为本体合规率（Schema Compliance Rate），用于衡量预测结果中满足当前领域本体连接约束的三元组比例。设测试集中所有可解析预测三元组总数为 $M$，其中满足合法连接规则集合 $\Omega$ 的三元组数为 $M_{valid}$，则
+\[
+SchemaRate=\frac{M_{valid}}{M}.
+\]
+本章中，$\Omega$ 由当前实际使用的 4 类关系连接方式构成，即（MilitaryNewsEvent, hasActor, Actor）、（MilitaryNewsEvent, hasMilitaryAsset, MilitaryAsset）、（MilitaryNewsEvent, hasLocation, Location）、（MilitaryNewsEvent, hasTime, Time）。该指标用于直接评估本体约束机制对非法关系、类型错配与结构越界问题的抑制效果。
+
+考虑到本章方法最终以实体与关系联合输出的 JSON 结果作为中间表示，本文进一步设置样本级联合完全匹配率（Joint Exact Match, Joint-EM）作为辅助指标。对于单条测试样本，若其预测 JSON 在完成规范化处理后，与对应金标样本的实体关系集合完全一致，则记为样本级命中；否则记为未命中。设命中样本数为 $N_{jem}$，则
+\[
+\mathit{Joint\text{-}EM}=\frac{N_{jem}}{N}.
+\]
+该指标不作为主结论指标，主要用于辅助观察不同方法在整条样本输出层面的可用性差异。
+
+对于完整方法内部的 $K$ 值实验，本章在 $K \in \{1,2,3\}$ 条件下分别统计上述指标，以分析候选数量变化对抽取质量、结构可解析性与本体合规性的影响。由于 $K$ 值仅影响完整方法中的候选生成与结果选择过程，因此该实验不在未微调基座模型和仅 QLoRA 微调模型上重复展开。
 
 \subsection{实验结果与分析}
 
