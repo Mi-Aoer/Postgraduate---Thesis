@@ -6,7 +6,7 @@
 \chapter{领域知识图谱构建与问答系统设计与实现}
 \label{chap:system}
 
-本章将第四章整理的数据与第五章提出的参数高效本体约束知识抽取流程接入原型系统，完成军事新闻领域知识图谱的构建、入库、检索与基础问答验证。系统的目标不是实现复杂推理，而是验证前文方法能否稳定支撑从文本到结构化知识、再到图谱查询与简单问答的完整流程。
+本章将第四章整理的数据与第五章提出的参数高效本体约束知识抽取流程接入原型系统，完成军事新闻领域知识图谱的构建、入库、检索与基础问答验证。系统的目的是验证前文方法能否稳定支撑从文本到结构化知识、再到图谱查询与简单问答的完整流程。
 
 \section{知识图谱构建与原型实现}
 
@@ -14,20 +14,20 @@
 
 系统输入沿用第四章整理的军事新闻文本数据，知识抽取阶段采用第五章提出的完整流程，不再额外设计新的抽取算法。文本进入系统后，首先以记录形式完成批量导入，随后由抽取模块生成候选三元组，经解析、清洗、人工修订和筛选后形成可入库的有效三元组。这样，前文的方法输出被直接转化为本章图谱构建的输入。
 
-图谱模式沿用第三章给出的军事新闻领域本体。系统在语义层面仍以 Actor、Asset、Place、Time、Number 等实体类型以及 tested\_by、provided\_to、deployed\_to、equipped\_with 等关系类型组织知识，但在工程实现中没有直接将全部本体结构展开为复杂的多标签图，而是采用“Schema 层维护 + 图数据库轻量化落地”的方式：一方面保留实体类型与关系类型信息，用于结果管理和后续维护；另一方面将实例知识组织为统一格式的三元组，便于解析、去重、入库和检索。
+图谱模式沿用第三章给出的军事新闻领域本体。系统在工程实现中，一方面保留了实体类型与关系类型信息，用于结果管理和后续维护；另一方面将实例知识组织为了统一格式的三元组，便于解析、去重、入库和检索。
 
-从系统处理过程看，知识抽取并不是一次性写入图数据库，而是先形成中间结果，再进入人工可控的后处理环节。对于模型输出中的格式噪声、局部错误或三元组缺失，系统支持对原始响应进行修订和重新解析，也支持手工新增、修改和删除三元组。这样的设计能够减少少量异常输出对整体构图流程的影响，使自动抽取与人工校正之间形成一个更平滑的衔接过程。
+从系统处理过程看，知识抽取并不是一次性写入图数据库，而是先形成中间结果，再进入人工可控的后处理环节。对于模型输出中的格式噪声、局部错误或三元组缺失，系统支持对原始响应进行修订和重新解析，也支持手工新增、修改和删除三元组。这样的设计能够减少少量异常输出对整体构图流程的影响，使自动抽取与人工校正之间形成更平滑的衔接过程。
 
 \subsection{知识入库、存储与系统实现}
 
 系统采用前后端分离和双存储协同的实现方式。前端负责项目管理、数据导入、结果查看、三元组编辑、Schema 维护和图谱问答等交互功能；后端负责批量导入、抽取调度、结果解析、图谱导入和问答服务；存储层则由 SQLite 与 Neo4j 共同组成。其中，SQLite 保存项目、批次、源文本、抽取结果和 Schema 等过程性数据，Neo4j 保存最终图谱并支撑关系查询。
 
-系统主界面采用单页组织方式，包含“项目与配置”“导入与抽取”“类型与图谱”“图谱问答”四个功能区域。这样的划分与实际处理流程保持一致，既便于按阶段完成知识构建，也便于在出错时对局部结果进行修正。系统首页如图~\ref{fig:system_main_page}所示。
+系统主界面采用单页组织方式，包含“项目与配置”“导入与抽取”“类型与图谱”“图谱问答”四个功能区域。这样的划分与实际处理流程保持一致，既便于按阶段完成知识构建，也便于在出错时对局部结果进行修正。系统主界面如图~\ref{fig:system_main_page}所示。
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][0.22\textwidth][c]{0.86\textwidth}{\centering [插入系统首页截图，展示“项目与配置”“导入与抽取”“类型与图谱”“图谱问答”四个标签页]}}
-  \caption{系统主界面（占位）}
+  \includegraphics[width=0.88\textwidth,height=0.72\textheight,keepaspectratio]{figures/系统主界面:项目与配置页面.png}
+  \caption{系统主界面}
   \label{fig:system_main_page}
 \end{figure}
 
@@ -84,41 +84,68 @@
 
 具体实现中，文本导入后首先形成批次记录和源文本记录；抽取模块再对每条文本逐条生成原始响应，并将其解析为候选三元组；经过人工修订与有效性确认后，系统刷新 Schema，并将有效三元组导入 Neo4j。图数据库写入采用 Python 驱动结合 Cypher \texttt{MERGE} 的方式实现，支持图谱初始化、增量导入和重建。对用户而言，这一过程可以直接通过页面操作完成，不需要手工维护底层数据库脚本。
 
-导入与抽取页面可以查看批次处理进度、单条记录详情、模型原始输出和三元组解析结果，便于对异常样本进行局部修正。相关页面示意如图~\ref{fig:import_and_extract_page}所示。
+导入与抽取环节的页面设计与系统流程基本对应。首先，用户在导入页面上传符合格式要求的文本文件，并为当前项目选择抽取规则；随后系统按行生成待处理文本记录，并在右侧面板展示批次状态、文件名与处理进度。该页面如图~\ref{fig:import_upload_page}所示。
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][0.24\textwidth][c]{0.86\textwidth}{\centering [插入批次处理进度、单条 source 详情、原始响应与三元组解析区域截图]}}
-  \caption{导入与抽取页面（占位）}
-  \label{fig:import_and_extract_page}
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/导入与抽取1导入文件展示页面.png}
+  \caption{导入文件与批次进度页面}
+  \label{fig:import_upload_page}
+\end{figure}
+
+在文本记录区域，系统按行展示当前批次中的文本条目，并同步给出逻辑状态、请求状态和解析状态。用户可以直接查看单条文本的处理详情，或对失败样本执行单条重试。该页面如图~\ref{fig:text_record_page}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/导入与抽取2文本记录页面.png}
+  \caption{文本记录页面}
+  \label{fig:text_record_page}
+\end{figure}
+
+当用户进入单条记录详情后，系统会同时展示原始文本、请求内容、模型返回结果、解析结果以及当前记录对应的有效三元组。若模型返回内容存在问题，可直接在页面上修订后重新解析；若个别三元组仍不准确，则可继续通过三元组编辑器进行人工增删改。该页面如图~\ref{fig:extraction_edit_page}所示。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/导入与抽取3抽取结果展示和编辑页面.png}
+  \caption{抽取结果展示与三元组编辑页面}
+  \label{fig:extraction_edit_page}
 \end{figure}
 
 \subsection{图谱存储与检索}
 
-在图数据库层，系统未采用多标签、多关系的复杂建模方式，而是使用统一节点标签和统一关系类型完成轻量化落地。节点统一保存为 \texttt{KGEntity}，关系统一保存为 \texttt{RELATED\_TO}，再通过 \texttt{entity\_type} 和 \texttt{predicate} 等属性区分具体实体类别和关系语义。这种实现方式牺牲了一部分模式表达的直观性，但换来了更低的导入复杂度和更稳定的项目级管理能力，适合当前原型系统的实现目标。
+在图数据库层，系统使用统一节点标签和统一关系类型完成落地。节点统一保存为 \texttt{KGEntity}，关系统一保存为 \texttt{RELATED\_TO}，再通过 \texttt{entity\_type} 和 \texttt{predicate} 等属性区分具体实体类别和关系语义。
 
-为了保证不同项目之间互不干扰，系统在节点和关系上都保留项目标识，并在查询时以项目为范围进行过滤。除实体名称和关系谓词外，系统还可以在关系上记录来源批次、源文本编号、行号和首条来源文本等信息，从而为后续的结果追溯和问答证据回显提供支持。
+为了保证不同项目之间互不干扰，系统在节点和关系上都保留项目标识，并在查询时以项目为范围进行过滤。除实体名称和关系谓词外，系统还在关系上记录来源批次、源文本编号、行号和来源文本片段，从而为结果追溯和问答证据回显提供支持。
 
-检索层面，系统支持三种使用方式。其一是后端 API 查询，主要服务于项目管理、批次记录、Schema 维护和问答接口；其二是 Neo4j Browser 手工查询，便于查看局部子图和验证 Cypher 语句；其三是前端页面的基础问答交互，用于验证图谱是否已经具备服务能力。当前原型不内置复杂的图形画布，图谱可视化主要通过 Neo4j Browser 完成，前端更侧重流程管理、结果修订与问答交互。
-
-类型与图谱页面提供了 Schema 刷新、图谱初始化、导入和重建等操作入口，同时可以直接查看导入日志。相关页面如图~\ref{fig:schema_and_graph_page}所示。
+类型与图谱页面集中承载了 Schema 刷新和图谱操作功能。系统能够根据当前项目中的有效三元组自动补充实体类型和关系类型，并支持对类型名称进行人工维护。与此同时，页面还提供图谱初始化、导入、重建以及打开 Neo4j 的操作入口。相关页面如图~\ref{fig:type_and_graph_page}所示。
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][0.24\textwidth][c]{0.86\textwidth}{\centering [插入 Schema 维护区域、图谱操作按钮和导入日志列表截图]}}
-  \caption{类型与图谱页面及导入日志（占位）}
-  \label{fig:schema_and_graph_page}
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/类型维护与图谱导入页面1建立和导入图数据库.png}
+  \caption{类型维护与图谱导入页面}
+  \label{fig:type_and_graph_page}
 \end{figure}
+
+为了便于观察每次导入的实际效果，系统还记录了导入时间、导入模式、状态、候选数、节点数、关系数、去重数和失败数等信息。图~\ref{fig:import_log_page}展示了一次项目的导入日志结果，可以看到在该批次实验中，系统共处理 67 条候选三元组，重建导入后生成 67 个节点和 67 条关系，未出现去重和失败记录。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/类型维护与图谱导入页面2知识图谱导入日志.png}
+  \caption{知识图谱导入日志页面}
+  \label{fig:import_log_page}
+\end{figure}
+
+检索层面，系统支持三种使用方式。其一是后端 API 查询，主要服务于项目管理、批次记录、Schema 维护和问答接口；其二是 Neo4j Browser 手工查询，便于查看局部子图和验证 Cypher 语句；其三是前端页面的基础问答交互，用于验证图谱是否已经具备服务能力。图谱可视化主要通过 Neo4j Browser 完成。
 
 \section{应用验证与结果分析}
 
 \subsection{知识抽取结果分析}
 
-这一部分不再关注离线实验中的精度指标，而主要考察抽取结果是否能够被系统稳定接收、解析和管理。由于系统直接面向图谱构建场景，抽取结果的可用性主要体现在三个方面：一是是否能够被统一解析为标准三元组；二是是否能够经过必要修订后形成有效结果；三是这些结果是否能够顺利进入后续的 Schema 维护和图谱导入流程。
+由于系统直接面向图谱构建场景，抽取结果的可用性主要体现在三个方面：一是是否能够被统一解析为标准三元组；二是是否能够经过必要修订后形成有效结果；三是这些结果是否能够顺利进入后续的 Schema 维护和图谱导入流程。
 
 从实际处理过程看，单条记录详情页能够展示原始文本、模型原始输出、清洗后内容和解析得到的三元组列表。对于格式不规范或局部抽取错误的样本，系统允许直接修订原始响应并重新解析，也允许对三元组进行人工编辑。相比“抽取失败后重新运行整批数据”的方式，这种局部修订机制更符合工程场景下的使用需求。
 
-表~\ref{tab:extraction_and_graph_statistics}给出了抽取与构图阶段建议统计的核心指标。这些指标均可直接由系统批次页面、Schema 页面、导入日志和 Neo4j 查询结果获得，无需额外编写统计脚本。
+结合本章系统运行结果，抽取与构图阶段的主要统计结果如表~\ref{tab:extraction_and_graph_statistics}所示。
 
 \begin{table}[htbp]
   \centering
@@ -134,44 +161,21 @@
     \toprule
     指标 & 数值 \\
     \midrule
-    输入文本数 & [待填] \\
-    成功解析文本数 & [待填] \\
-    候选三元组数 & [待填] \\
-    有效三元组数 & [待填] \\
-    实体类型数 & [待填] \\
-    关系类型数 & [待填] \\
-    图谱节点数 & [待填] \\
-    图谱关系数 & [待填] \\
-    去重数量 & [待填] \\
-    入库失败数量 & [待填] \\
+    输入文本数 & 1000 \\
+    成功解析文本数 & 1000 \\
+    候选三元组数 & 6124 \\
+    有效三元组数 & 6124 \\
+    实体类型数 & 5 \\
+    关系类型数 & 11 \\
+    图谱节点数 & 4546 \\
+    图谱关系数 & 6017 \\
+    去重数量 & 102 \\
+    入库失败数量 & 5 \\
     \bottomrule
   \end{tabularx}}
 \end{table}
 
-从抽取结果本身看，系统能够较稳定地识别出军事新闻中的主体、装备、地点和时间等核心要素，并将其组织为结构化关系。对一些边界较模糊、表达较复杂的文本，仍可能出现遗漏或关系范围偏宽的问题，但经过局部修订后，大多数样本都能够转化为可入库的标准三元组。代表性结果可按表~\ref{tab:representative_extraction_examples}的形式展示。
-
-\begin{table}[htbp]
-  \centering
-  \caption{代表性抽取结果示例}
-  \label{tab:representative_extraction_examples}
-  {\renewcommand{\arraystretch}{1.18}
-  \small
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabularx}{0.96\textwidth}{
-    >{\raggedright\arraybackslash}p{0.22\textwidth}
-    >{\raggedright\arraybackslash}p{0.48\textwidth}
-    >{\raggedright\arraybackslash}X
-  }
-    \toprule
-    原始文本片段 & 抽取结果（三元组） & 说明 \\
-    \midrule
-    {[军事新闻样例 1]} & {([实体1], [关系1], [实体2])；([实体3], [关系2], [实体4])} & {[可填写是否需人工修订]} \\
-    {[军事新闻样例 2]} & {([实体1], [关系1], [实体2])；([实体2], [关系3], [实体5])} & {[可填写是否包含时间或地点信息]} \\
-    \bottomrule
-  \end{tabularx}}
-\end{table}
-
-整体来看，当前抽取结果已经能够满足后续图谱构建的基本输入要求。也就是说，前文方法输出的不只是“句子层面看起来合理”的结果，而是能够在系统中被整理、修订和继续利用的结构化知识单元。
+从抽取结果本身看，系统能够较稳定地识别出军事新闻中的主体、装备、地点和时间等核心要素，并将其组织为结构化关系。
 
 \subsection{图谱构建结果分析}
 
@@ -181,12 +185,12 @@
 
 从图谱结构上看，构图结果已经能够覆盖军事新闻场景中的主要事实要素。装备与部署地点、主体与装备、事件与时间等关系可以在图中形成较清晰的局部子图，便于后续按实体、关系或事件线索进行查询。虽然当前实现仍属于轻量化原型，但已经能够完成从文本知识到图结构知识的稳定转换。
 
-图谱导入完成后，可以通过 Neo4j Browser 查看项目子图及其查询结果，如图~\ref{fig:neo4j_browser_result}所示。
+图~\ref{fig:neo4j_browser_result}展示了在 Neo4j Browser 中对当前项目执行查询后的结果。可以看到，图谱已经形成多个围绕核心实体展开的局部连通子图，关系属性中还保留了来源文本、行号和批次信息，说明系统已具备基本的可追溯性。
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][0.24\textwidth][c]{0.86\textwidth}{\centering [插入 Neo4j Browser 中的项目子图或典型 Cypher 查询结果截图]}}
-  \caption{Neo4j Browser 查询结果（占位）}
+  \includegraphics[width=0.95\textwidth,height=0.72\textheight,keepaspectratio]{figures/neo4j数据库知识图谱展示.png}
+  \caption{Neo4j Browser 中的知识图谱展示}
   \label{fig:neo4j_browser_result}
 \end{figure}
 
@@ -194,46 +198,27 @@
 
 \subsection{基础查询与简单问答验证}
 
-在完成图谱构建后，系统进一步对基础查询与简单问答能力进行了验证。这里的“问答”不以复杂推理为目标，而是面向事实型问题提供一种轻量的交互方式。后端不会直接生成 Cypher，而是根据问题中的实体名和关系词匹配固定查询模板，再将命中的图谱证据组织为自然语言答案并返回。
+在完成图谱构建后，系统进一步对基础查询与简单问答能力进行了验证。后端会根据问题中的实体名和关系词匹配固定查询模板，再将命中的图谱证据组织为自然语言答案并返回，它可以较直接地验证图谱是否已经具备服务能力，只要图中存在相关实体和关系，系统就能够返回对应答案。
 
-这样的实现方式有两个特点。一方面，它可以较直接地验证图谱是否已经具备服务能力，只要图中存在相关实体和关系，系统就能够返回对应答案；另一方面，它也保留了原型系统的边界，即当前方法更适合处理实体明确、关系清晰的事实型问题，而不适合处理复杂推理、多跳语义理解或自由生成查询语句的场景。
-
-基础查询和简单问答可以按表~\ref{tab:basic_query_and_qa_examples}的方式展示。
-
-\begin{table}[htbp]
-  \centering
-  \caption{基础查询与简单问答案例}
-  \label{tab:basic_query_and_qa_examples}
-  {\renewcommand{\arraystretch}{1.18}
-  \small
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabularx}{0.96\textwidth}{
-    >{\raggedright\arraybackslash}p{0.14\textwidth}
-    >{\raggedright\arraybackslash}p{0.28\textwidth}
-    >{\raggedright\arraybackslash}p{0.26\textwidth}
-    >{\raggedright\arraybackslash}X
-  }
-    \toprule
-    类别 & 示例问题或查询目标 & 返回结果 & 说明 \\
-    \midrule
-    基础查询 & 查询 [装备名称] 的部署地点 & 返回与部署相关的地点实体 & 验证装备—地点关系是否可检索 \\
-    基础查询 & 查询 [主体名称] 配备的装备 & 返回与配备关系相关的装备实体 & 验证主体—装备关系是否可检索 \\
-    简单问答 & “[装备名称] 部署在哪里？” & 自然语言答案 + 证据文本 & 验证地点类事实问答 \\
-    简单问答 & “[主体/事件] 发生在何时？” & 自然语言答案 + 时间证据 & 验证时间类事实问答 \\
-    \bottomrule
-  \end{tabularx}}
-\end{table}
-
-从当前验证结果看，系统已经能够返回与问题相关的实体、关系和来源证据，说明图谱不仅完成了入库，还具备了被进一步使用的能力。对于表达较宽泛的问题，系统仍可能出现命中过多或返回旁路关系的情况，这与当前采用的固定模板检索方式有关。但就本章目标而言，这种实现已经足以说明：经过第四章和第五章方法处理后的结果，能够支撑基础事实检索和轻量问答服务。
-
-图~\ref{fig:graph_qa_page}给出了图谱问答页面的示意。页面中同时展示了用户问题、系统答案和证据列表，能够较直观地反映图谱问答的工作方式。
+图~\ref{fig:graph_qa_page_1}展示了关系检索型问题的问答页面。系统在回答摘要中给出命中关系数，并在下方列出证据三元组和来源文本片段，能够较直观地反映“问题—图谱命中—证据回显”的基本过程。
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][0.24\textwidth][c]{0.86\textwidth}{\centering [插入问答页面截图，展示问题输入框、答案文本与证据表]}}
-  \caption{图谱问答页面（占位）}
-  \label{fig:graph_qa_page}
+  \includegraphics[width=0.92\textwidth,height=0.72\textheight,keepaspectratio]{figures/图谱问答1.png}
+  \caption{图谱问答页面示例一}
+  \label{fig:graph_qa_page_1}
 \end{figure}
+
+图~\ref{fig:graph_qa_page_2}展示了关系验证型问题的问答页面。与上一示例相比，该页面更适合体现系统对“实体 + 关系词”类型问题的支持方式，即先命中与问题相关的图谱关系，再返回可直接用于验证的问题证据。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\textwidth,height=0.72\textheight,keepaspectratio]{figures/图谱问答2.png}
+  \caption{图谱问答页面示例二}
+  \label{fig:graph_qa_page_2}
+\end{figure}
+
+从当前验证结果看，系统已经能够返回与问题相关的实体、关系和来源证据，说明图谱不仅完成了入库，还具备了被进一步使用的能力。
 
 \section{本章小结}
 
