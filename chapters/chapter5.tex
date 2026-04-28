@@ -323,7 +323,7 @@ Y^{*}=Y_{k^{*}},\quad k^{*}=\arg\max_{1\le k\le K'} Score_k.
   \centering
   \caption{军事新闻领域实体关系联合抽取数据集关系数量统计}
   \label{tab:ch5_relation_count}
-  {\renewcommand{\arraystretch}{1.08}
+  {\BITSetup{misc = {tabularRowSeparation = 1.18}}
   \small
   \setlength{\tabcolsep}{10pt}
   \begin{tabular}{@{}lr@{}}
@@ -358,7 +358,7 @@ Y^{*}=Y_{k^{*}},\quad k^{*}=\arg\max_{1\le k\le K'} Score_k.
   \centering
   \caption{实验环境配置}
   \label{tab:experiment_environment}
-  {\renewcommand{\arraystretch}{1.08}
+  {\BITSetup{misc = {tabularRowSeparation = 1.18}}
   \small
   \setlength{\tabcolsep}{10pt}
   \begin{tabular}{@{}ll@{}}
@@ -376,13 +376,15 @@ Y^{*}=Y_{k^{*}},\quad k^{*}=\arg\max_{1\le k\le K'} Score_k.
   \end{tabular}}
 \end{table}
 
+\FloatBarrier
+
 QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所示。
 
 \begin{table}[!htbp]
   \centering
   \caption{模型训练的参数设置}
   \label{tab:training_parameters}
-  {\renewcommand{\arraystretch}{1.08}
+  {\BITSetup{misc = {tabularRowSeparation = 1.18}}
   \small
   \setlength{\tabcolsep}{10pt}
   \begin{tabular}{@{}lc@{}}
@@ -404,6 +406,8 @@ QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所�
     \bottomrule
   \end{tabular}}
 \end{table}
+
+\FloatBarrier
 
 多候选评分函数及生成阶段的主要参数设置见表~\ref{tab:scoring_generation_params}。其中，评分权重用于式~\eqref{eq:ch5_error_penalty}和式~\eqref{eq:ch5_candidate_score}中的加权组合，生成参数用于控制候选结果数量和采样随机性。
 
@@ -438,9 +442,9 @@ QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所�
 
 \subsection{对比实验、消融实验与评价指标}
 
-本章将实验设置划分为横向对比实验、消融实验和部署成本分析三部分。横向对比实验用于考察本文方法相对于已有流水线式抽取方法和监督式实体关系联合抽取方法的效果差异；消融实验用于分析 QLoRA 领域适配、本体约束和多候选评分等模块对结果质量的具体贡献；部署成本分析则用于评估本文方法在本地部署场景下的资源消耗和工程可行性。通过上述分组，可以分别回答“本文方法是否优于主流类似方法”“本文内部模块是否有效”以及“性能提升是否具有部署可行性”三个问题。
+本章将实验设置划分为横向对比实验、消融实验和部署成本分析三部分。横向对比实验用于考察本文方法相对于已有流水线式抽取方法和监督式实体关系联合抽取方法的效果差异；消融实验用于分析 QLoRA 领域适配、本体约束和多候选评分等模块对结果质量的具体贡献；部署成本分析则用于评估本文方法在本地部署场景下的资源消耗和工程可行性。通过上述分组，可以分别回答“本文方法是否优于主流类似方法”、“本文内部模块是否有效”以及“性能提升是否具有部署可行性”三个问题。
 
-在横向对比方法选择上，本文选取了三组与实体关系联合抽取任务直接相关的代表性基线。BERT-CRF + Relation Classifier 代表传统流水线式抽取方法，其中 BERT 与 CRF 分别为文本编码和序列标注提供基础\cite{Devlin2019BERT,Lafferty2001CRF}，可用于观察实体识别误差向关系分类阶段传递时的影响；CasRel\cite{Wei2020CasRel} 和 TPLinker\cite{Wang2020TPLinker} 代表监督式实体关系联合抽取模型，能够较好刻画实体对与关系之间的关联，是三元组抽取任务中的常用基线。本文完整方法则在相同测试集、相同三元组级评价指标下参与比较，以验证其在抽取质量、结构合规性和本地部署可行性之间的综合优势。表~\ref{tab:baseline_training_params}列出了各基线模型的主要训练参数。其中，BERT-CRF+RC 中的 Batch size 和 Epoch 分别对应 BERT-CRF 实体识别模块与 BERT 关系分类模块的设置。
+在横向对比方法选择上，本章选取了三组与实体关系联合抽取任务直接相关的代表性基线。第一组是BERT-CRF + Relation Classifier ，代表传统流水线式抽取方法，其中 BERT 与 CRF 分别为文本编码和序列标注提供基础\cite{Devlin2019BERT,Lafferty2001CRF}，可用于观察实体识别误差向关系分类阶段传递时的影响；第二组和第三组分别是 CasRel\cite{Wei2020CasRel} 和 TPLinker\cite{Wang2020TPLinker} ，代表监督式实体关系联合抽取模型，能够较好刻画实体对与关系之间的关联，是三元组抽取任务中的常用基线。各种方法都是在相同测试集、相同三元组级评价指标下参与比较。表~\ref{tab:baseline_training_params}列出了各基线模型的主要训练参数。其中 BERT-CRF+RC 中的 Batch size 和 Epoch 分别对应 BERT-CRF 实体识别模块与 BERT 关系分类模块的设置。
 
 \begin{table}[htbp]
   \centering
@@ -452,9 +456,9 @@ QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所�
   \begin{tabularx}{0.98\textwidth}{@{}
     >{\raggedright\arraybackslash}p{0.15\textwidth}
     >{\raggedright\arraybackslash}p{0.25\textwidth}
-    >{\centering\arraybackslash}p{0.10\textwidth}
-    >{\centering\arraybackslash}p{0.11\textwidth}
+    >{\centering\arraybackslash}p{0.08\textwidth}
     >{\centering\arraybackslash}p{0.09\textwidth}
+    >{\centering\arraybackslash}p{0.07\textwidth}
     >{\raggedright\arraybackslash}X
   @{}}
     \toprule
@@ -484,7 +488,7 @@ QLoRA 微调训练阶段的关键参数见表~\ref{tab:training_parameters}所�
   \end{tabularx}}
 \end{table}
 
-本文方法内部的消融实验共包括三组。第一组为未微调基座模型（Base）。该组直接使用基座模型完成军事新闻实体关系抽取，不进行领域参数更新，也不启用本体约束与多候选结果评分，用作零领域适配条件下的基础参照；第二组为仅进行 QLoRA 微调的模型（QLoRA-only）。该组在相同基座模型上使用训练集进行领域适配训练，但在推理阶段不启用本体约束与多候选结果评分机制，直接输出单次生成结果。该组用于检验参数高效微调是否能够提升模型在军事新闻场景下的抽取能力；第三组为完整方法（QLoRA + 多候选评分）。该组在 QLoRA 微调基础上，进一步对同一输入生成多个候选结果，并结合模型置信度、本体规则满足度与错误惩罚项进行综合评分，从中选择得分最高的候选结果作为最终输出。该组用于检验本体约束与多候选结果评分机制对结果合法性、结构稳定性与最终抽取质量的增益作用。为保证消融分析的可比性，三组方法统一采用相同提示、相同输出格式与相同基础解码参数。
+在消融实验的设计上，本章设置了三组基线。第一组为未微调基座模型（Base）。该组直接使用基座模型完成军事新闻实体关系抽取，不进行领域参数更新，也不启用本体约束与多候选结果评分，用作零领域适配条件下的基础参照；第二组为仅进行 QLoRA 微调的模型（QLoRA-only）。该组在相同基座模型上使用训练集进行领域适配训练，但在推理阶段不启用本体约束与多候选结果评分机制，直接输出单次生成结果。该组用于检验参数高效微调是否能够提升模型在军事新闻场景下的抽取能力；第三组为完整方法（QLoRA + 多候选评分）。该组在 QLoRA 微调基础上，进一步对同一输入生成多个候选结果，并结合模型置信度、本体规则满足度与错误惩罚项进行综合评分，从中选择得分最高的候选结果作为最终输出。该组用于检验本体约束与多候选结果评分机制对结果合法性、结构稳定性与最终抽取质量的增益作用。为保证消融分析的可比性，三组方法统一采用相同提示、相同输出格式与相同基础解码参数。
 
 本章评价指标以三元组级别评测为主，并辅以结构化输出可用性指标。主指标包括 Precision、Recall 和 F1，用于衡量模型在测试集上的三元组级抽取质量。设预测三元组集合为 $\hat{T}$，参考标注三元组集合为 $T$，在一对一匹配约束下统计真正例 $TP$、假正例 $FP$ 和假负例 $FN$，则三项指标定义为
 \begin{equation}
@@ -538,10 +542,9 @@ SchemaRate=\frac{M_{valid}}{M}.
   \centering
   \caption{不同主流方法在测试集上的实体关系联合抽取结果比较}
   \label{tab:mainstream_comparison}
-  {\renewcommand{\arraystretch}{1.18}
-  \small
+  {\small
   \setlength{\tabcolsep}{8pt}
-  \begin{tabularx}{0.96\textwidth}{@{}>{\raggedright\arraybackslash}Xcccccc@{}}
+  \begin{tabular}{@{}lcccccc@{}}
     \toprule
     方法 & TP & FP & FN & P/\% & R/\% & F1/\% \\
     \midrule
@@ -550,7 +553,7 @@ SchemaRate=\frac{M_{valid}}{M}.
     TPLinker & 3995 & 1612 & 2129 & 71.25 & 65.24 & 68.11 \\
     本文方法 & \textbf{4406} & \textbf{1227} & \textbf{1718} & \textbf{78.22} & \textbf{71.95} & \textbf{74.95} \\
     \bottomrule
-  \end{tabularx}}
+  \end{tabular}}
 \end{table}
 
 \begin{figure}[htbp]
@@ -707,11 +710,9 @@ SchemaRate=\frac{M_{valid}}{M}.
 
 \subsection{结果讨论}
 
-从实验组织上看，本章将主流方法横向对比与本文方法内部消融进行了明确区分。表~\ref{tab:mainstream_comparison} 给出了 BERT-CRF + RC、CasRel、TPLinker 与本文方法在相同测试集上的三元组级评价结果。横向对比结果表明，本文方法相较流水线抽取和监督式联合抽取基线均取得更高的 Precision、Recall 和 F1，但该结论仅对应本章已完成的三组外部基线，不替代对更多生成式或统一信息抽取方法的进一步比较。
+从实验结果上看，本文方法相较流水线抽取和监督式联合抽取基线均取得更高的 Precision、Recall 和 F1。具体来说，QLoRA 领域适配提升了基座模型在军事新闻实体关系联合抽取任务上的表现，本体约束和多候选评分进一步改善了候选结果选择、非法三元组抑制与结构稳定性。后续的参数敏感性分析进一步说明了多候选数量和采样参数会影响抽取质量与推理时延之间的平衡，过大的候选空间会带来额外耗时，但边际收益有限。
 
-已有实测结果主要支撑本文方法内部模块有效性的结论。表~\ref{tab:ch5_main_results} 表明，QLoRA 领域适配显著提升了基座模型在军事新闻实体关系联合抽取任务上的表现；在此基础上，本体约束和多候选评分进一步改善了候选结果选择、非法三元组抑制与结构稳定性。表~\ref{tab:ch5_k_impact} 和表~\ref{tab:ch5_topp_impact} 进一步说明，多候选数量和采样参数会影响抽取质量与推理时延之间的平衡，过大的候选空间会带来额外耗时，但边际收益有限。
-
-从部署角度看，本文方法的优势并不只体现在单一 F1 指标上，还体现在本地部署条件下对抽取质量、结构合法性和推理成本的综合平衡。与 QLoRA-only 相比，完整方法不引入额外训练成本，新增开销主要集中在推理阶段的多候选生成与评分环节；结合本体约束后，模型输出更容易满足知识图谱入库所需的实体类型和关系类型匹配要求。不同基座模型的比较也表明，较小模型可以降低显存占用和推理时延，但会带来抽取质量和结构稳定性的下降，因此本文选择 DeepSeek-R1-Distill-Qwen-32B 作为抽取质量与本地部署可行性之间的折中方案。
+从部署角度看，本文方法的优势体现在本地有限的部署条件下对抽取质量、结构合法性和推理成本的综合平衡。与 QLoRA-only 相比，完整方法不引入额外训练成本，新增开销主要集中在推理阶段的多候选生成与评分环节；结合本体约束后，模型输出更容易满足知识图谱入库所需的实体类型和关系类型匹配要求。不同基座模型的比较也表明，较小模型可以降低显存占用和推理时延，但会带来抽取质量和结构稳定性的下降，因此本文选择 DeepSeek-R1-Distill-Qwen-32B 作为抽取质量与本地部署可行性之间的折中方案。
 
 \FloatBarrier
 
